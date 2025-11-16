@@ -1,0 +1,164 @@
+import processing.serial.*;
+
+Serial myPort;
+float ax, ay, az;
+float rotateX = 0, rotateY = 0;
+float prevAx = 0, prevAy = 0;
+float deadZone = 200; // Smaller deadzone for more sensitivity
+
+void setup() {
+  size(800, 600, P3D);
+  println("Available Serial Ports:");
+  println(Serial.list());
+  
+  myPort = new Serial(this, "COM8", 115200);
+  println("Connected to COM11 - Responsive 3D Cube Control");
+}
+
+void draw() {
+  background(30);
+  
+  // Setup lights
+  directionalLight(126, 126, 126, 0, 0, -1);
+  ambientLight(102, 102, 102);
+  
+  // Read serial data
+  if (myPort.available() > 0) {
+    String data = trim(myPort.readStringUntil('\n'));
+    if (data != null && data.contains(",")) {
+      String[] p = split(data, ',');
+      if (p.length == 3) {
+        ax = float(p[0]);
+        ay = float(p[1]);
+        az = float(p[2]);
+      }
+    }
+  }
+  
+  // Calculate how much the MPU moved
+  float deltaX = ax - prevAx;
+  float deltaY = ay - prevAy;
+  
+  // Apply deadzone - but much more sensitive
+  if (abs(deltaX) > deadZone || abs(deltaY) > deadZone) {
+    // Increased rotation sensitivity
+    rotateY += deltaX * 0.0001; // 5x more sensitive
+    rotateX += deltaY * 0.0001;
+  }
+  
+  // Store current values for next frame
+  prevAx = ax;
+  prevAy = ay;
+  
+  // Draw the enhanced 3D cube
+  drawColoredCube();
+  
+  // Display data
+  drawHUD();
+}
+
+void drawColoredCube() {
+  pushMatrix();
+  
+  // Center the cube
+  translate(width/2, height/2, 0);
+  
+  // Apply rotations
+  rotateX(rotateX);
+  rotateY(rotateY);
+  
+  // Draw colored cube with different colored faces
+  noStroke();
+  
+  // Front face (red)
+  fill(255, 0, 0, 200);
+  beginShape(QUADS);
+  vertex(-50, -50, 50);
+  vertex(50, -50, 50);
+  vertex(50, 50, 50);
+  vertex(-50, 50, 50);
+  endShape();
+  
+  // Back face (green)
+  fill(0, 255, 0, 200);
+  beginShape(QUADS);
+  vertex(-50, -50, -50);
+  vertex(-50, 50, -50);
+  vertex(50, 50, -50);
+  vertex(50, -50, -50);
+  endShape();
+  
+  // Right face (blue)
+  fill(0, 0, 255, 200);
+  beginShape(QUADS);
+  vertex(50, -50, 50);
+  vertex(50, -50, -50);
+  vertex(50, 50, -50);
+  vertex(50, 50, 50);
+  endShape();
+  
+  // Left face (yellow)
+  fill(255, 255, 0, 200);
+  beginShape(QUADS);
+  vertex(-50, -50, 50);
+  vertex(-50, 50, 50);
+  vertex(-50, 50, -50);
+  vertex(-50, -50, -50);
+  endShape();
+  
+  // Top face (magenta)
+  fill(255, 0, 255, 200);
+  beginShape(QUADS);
+  vertex(-50, -50, 50);
+  vertex(-50, -50, -50);
+  vertex(50, -50, -50);
+  vertex(50, -50, 50);
+  endShape();
+  
+  // Bottom face (cyan)
+  fill(0, 255, 255, 200);
+  beginShape(QUADS);
+  vertex(-50, 50, 50);
+  vertex(50, 50, 50);
+  vertex(50, 50, -50);
+  vertex(-50, 50, -50);
+  endShape();
+  
+  // Add wireframe to see edges
+  stroke(255);
+  strokeWeight(1);
+  noFill();
+  box(100);
+  
+  popMatrix();
+}
+
+void drawHUD() {
+  fill(0, 0, 0, 180);
+  rect(10, 10, 350, 180);
+  
+  fill(255);
+  textSize(16);
+  text("Responsive 3D Cube - MPU6050 Control", 20, 30);
+  text("MPU X: " + (int)ax, 20, 55);
+  text("MPU Y: " + (int)ay, 20, 80);
+  text("MPU Z: " + (int)az, 20, 105);
+  text("Rotation X: " + nf(degrees(rotateX) % 360, 0, 1) + "°", 20, 130);
+  text("Rotation Y: " + nf(degrees(rotateY) % 360, 0, 1) + "°", 20, 155);
+  
+  // Movement indicator
+  float deltaX = ax - prevAx;
+  float deltaY = ay - prevAy;
+  if (abs(deltaX) > deadZone || abs(deltaY) > deadZone) {
+    fill(0, 255, 0);
+    text("MOVING - Cube rotating", 20, 180);
+  } else {
+    fill(255, 0, 0);
+    text("STATIONARY - Cube still", 20, 180);
+  }
+  
+  // Instructions
+  fill(255);
+  text("Tilt MPU to rotate cube - More Sensitive!", width - 300, 30);
+  text("Deadzone: " + deadZone, width - 300, 60);
+}
