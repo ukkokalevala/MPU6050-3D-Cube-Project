@@ -1,0 +1,40 @@
+#include <Wire.h>
+
+const int MPU = 0x68;
+
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
+void setup() {
+  Serial.begin(115200);
+
+  Wire.begin(7, 6);  // SDA=7, SCL=6  
+
+  // Wake MPU6050
+  Wire.beginTransmission(MPU);
+  Wire.write(0x6B);
+  Wire.write(0);
+  Wire.endTransmission();
+
+  Serial.println("MPU6050 Ready...");
+}
+
+void loop() {
+  Wire.beginTransmission(MPU);
+  Wire.write(0x3B);
+  Wire.endTransmission(false);
+  Wire.requestFrom(MPU, 14, true);
+
+  ax = Wire.read() << 8 | Wire.read();
+  ay = Wire.read() << 8 | Wire.read();
+  az = Wire.read() << 8 | Wire.read();
+  gx = Wire.read() << 8 | Wire.read();
+  gy = Wire.read() << 8 | Wire.read();
+  gz = Wire.read() << 8 | Wire.read();
+
+  Serial.print(ax); Serial.print(",");
+  Serial.print(ay); Serial.print(",");
+  Serial.println(az);
+
+  delay(20);
+}
